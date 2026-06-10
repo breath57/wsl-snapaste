@@ -133,6 +133,23 @@ def _set_clipboard_filedrop(files: list[str]) -> None:
 
 _saved_paths: list[str] = []
 
+
+def restore_clipboard_image() -> bool:
+    "Restore clipboard to raw DIB only, removing path/text formats."
+    if not _saved_paths:
+        return False
+    dib_data = get_clipboard_dib()
+    if not dib_data:
+        return False
+    win32clipboard.OpenClipboard(0)
+    try:
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(CF_DIB, dib_data)
+    finally:
+        win32clipboard.CloseClipboard()
+    return True
+
+
 def snapaste() -> str | None:
     if not has_clipboard_image():
         return None

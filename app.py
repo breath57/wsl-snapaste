@@ -9,7 +9,7 @@ import time
 import win32gui
 from PIL import Image as PilImage, ImageDraw
 
-from clipboard import has_clipboard_image, snapaste
+from clipboard import has_clipboard_image, snapaste, restore_clipboard_image
 
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
@@ -113,12 +113,12 @@ def _show_menu(hwnd):
     hsub = win32gui.CreatePopupMenu()
     on_flag = MF_CHECKED if _enabled else 0
     off_flag = MF_CHECKED if not _enabled else 0
-    win32gui.AppendMenu(hsub, MF_STRING | on_flag, ID_ON, "开启")
-    win32gui.AppendMenu(hsub, MF_STRING | off_flag, ID_OFF, "关闭")
-    win32gui.AppendMenu(hmenu, MF_POPUP, hsub, "状态")
+    win32gui.AppendMenu(hsub, MF_STRING | on_flag, ID_ON, "\u5f00\u542f")
+    win32gui.AppendMenu(hsub, MF_STRING | off_flag, ID_OFF, "\u5173\u95ed")
+    win32gui.AppendMenu(hmenu, MF_POPUP, hsub, "\u72b6\u6001")
 
     win32gui.AppendMenu(hmenu, MF_SEPARATOR, 0, "")
-    win32gui.AppendMenu(hmenu, MF_STRING, ID_QUIT, "退出")
+    win32gui.AppendMenu(hmenu, MF_STRING, ID_QUIT, "\u9000\u51fa")
 
     pt = win32gui.GetCursorPos()
     win32gui.SetForegroundWindow(hwnd)
@@ -150,14 +150,41 @@ def _tray_proc(hwnd, msg, wparam, lparam):
     elif msg == WM_COMMAND:
         cmd = wparam & 0xFFFF
         if cmd == ID_ON:
+            was_off = not _enabled
             _enabled = True
             log.info("ON")
+            if was_off:
+                threading.Thread(target=_toggle_clipboard, args=(True,), daemon=True).start()
         elif cmd == ID_OFF:
+            was_on = _enabled
             _enabled = False
             log.info("OFF")
+            if was_on:
+                threading.Thread(target=_toggle_clipboard, args=(False,), daemon=True).start()
         elif cmd == ID_QUIT:
             _on_exit()
     return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+
+def _toggle_clipboard(to_enabled: bool):
+    """Trigger clipboard conversion on state toggle."""
+    global _processing
+    if _processing:
+        return
+    _processing = True
+    try:
+        time.sleep(0.1)
+        if to_enabled:
+            filepath = snapaste()
+            if filepath:
+                log.info("Toggle ON -> Path: %s", filepath)
+        else:
+            if restore_clipboard_image():
+                log.info("Toggle OFF -> Restored image")
+    except Exception as e:
+        log.error("Toggle error: %s", e)
+    finally:
+        _processing = False
 
 
 def _process_clipboard():

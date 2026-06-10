@@ -1,4 +1,5 @@
 import ctypes
+import ctypes.wintypes
 import logging
 import os
 import tempfile
@@ -6,20 +7,35 @@ import threading
 import time
 
 import win32gui
-from infi.systray import SysTrayIcon
 from PIL import Image as PilImage, ImageDraw
 
-from clipboard import has_clipboard_image, snapaste_save, snapaste_path, get_last_saved_path
+from clipboard import has_clipboard_image, snapaste
 
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
 
 WM_DRAWCLIPBOARD = 0x0308
 WM_CHANGECBCHAIN = 0x030D
-WM_USER_EXIT = 0x0400
+WM_COMMAND = 0x0111
+WM_TRAYICON = 0x0401
+ID_ON = 1
+ID_OFF = 2
+ID_QUIT = 3
+ID_TRAYICON = 1
 
-MODE_IMAGE = "image"
-MODE_PATH = "path"
+NIM_ADD = 0x00000000
+NIM_DELETE = 0x00000002
+NIF_MESSAGE = 0x00000001
+NIF_ICON = 0x00000002
+NIF_TIP = 0x00000004
+
+MF_STRING = 0x00000000
+MF_POPUP = 0x00000010
+MF_SEPARATOR = 0x00000800
+MF_CHECKED = 0x00000008
+
+TPM_RIGHTBUTTON = 0x0020
+TPM_BOTTOMALIGN = 0x0020
 
 logging.basicConfig(
     filename=LOG_PATH,
@@ -28,12 +44,31 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-_tray = None
-_hwnd = None
+_clip_hwnd = None
+_tray_hwnd = None
 _next_hwnd = None
-_mode = MODE_PATH
+_enabled = True
 _processing = False
-_recent_saved = None
+
+
+class NOTIFYICONDATAW(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", ctypes.c_uint),
+        ("hWnd", ctypes.wintypes.HWND),
+        ("uID", ctypes.c_uint),
+        ("uFlags", ctypes.c_uint),
+        ("uCallbackMessage", ctypes.c_uint),
+        ("hIcon", ctypes.wintypes.HANDLE),
+        ("szTip", ctypes.c_wchar * 128),
+        ("dwState", ctypes.c_uint),
+        ("dwStateMask", ctypes.c_uint),
+        ("szInfo", ctypes.c_wchar * 256),
+        ("uTimeoutOrVersion", ctypes.c_uint),
+        ("szInfoTitle", ctypes.c_wchar * 64),
+        ("dwInfoFlags", ctypes.c_uint),
+        ("guidItem", ctypes.c_wchar * 39),
+        ("hBalloonIcon", ctypes.wintypes.HANDLE),
+    ]
 
 
 def _create_icon_image():
@@ -48,89 +83,102 @@ def _create_icon_image():
     return icon_path
 
 
+def _add_tray_icon(hwnd):
+    hicon = win32gui.LoadImage(
+        0, os.path.join(tempfile.gettempdir(), "snapaste_icon.ico"),
+        1, 16, 16, 0x00000010
+    )
+    nid = NOTIFYICONDATAW()
+    nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
+    nid.hWnd = hwnd
+    nid.uID = ID_TRAYICON
+    nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
+    nid.uCallbackMessage = WM_TRAYICON
+    nid.hIcon = hicon
+    nid.szTip = APP_NAME
+    ctypes.windll.shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid))
+
+
+def _remove_tray_icon(hwnd):
+    nid = NOTIFYICONDATAW()
+    nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
+    nid.hWnd = hwnd
+    nid.uID = ID_TRAYICON
+    ctypes.windll.shell32.Shell_NotifyIconW(NIM_DELETE, ctypes.byref(nid))
+
+
+def _show_menu(hwnd):
+    hmenu = win32gui.CreatePopupMenu()
+
+    hsub = win32gui.CreatePopupMenu()
+    on_flag = MF_CHECKED if _enabled else 0
+    off_flag = MF_CHECKED if not _enabled else 0
+    win32gui.AppendMenu(hsub, MF_STRING | on_flag, ID_ON, "开启")
+    win32gui.AppendMenu(hsub, MF_STRING | off_flag, ID_OFF, "关闭")
+    win32gui.AppendMenu(hmenu, MF_POPUP, hsub, "状态")
+
+    win32gui.AppendMenu(hmenu, MF_SEPARATOR, 0, "")
+    win32gui.AppendMenu(hmenu, MF_STRING, ID_QUIT, "退出")
+
+    pt = win32gui.GetCursorPos()
+    win32gui.SetForegroundWindow(hwnd)
+    win32gui.TrackPopupMenu(hmenu, TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt[0], pt[1], 0, hwnd, None)
+    win32gui.PostMessage(hwnd, 0, 0, 0)
+
+
+def _on_exit():
+    global _clip_hwnd, _next_hwnd
+    if _tray_hwnd:
+        _remove_tray_icon(_tray_hwnd)
+        win32gui.DestroyWindow(_tray_hwnd)
+    if _clip_hwnd:
+        try:
+            if _next_hwnd:
+                ctypes.windll.user32.ChangeClipboardChain(_clip_hwnd, _next_hwnd)
+        except Exception:
+            pass
+        win32gui.DestroyWindow(_clip_hwnd)
+        _clip_hwnd = None
+    win32gui.PostQuitMessage(0)
+
+
+def _tray_proc(hwnd, msg, wparam, lparam):
+    global _enabled
+    if msg == WM_TRAYICON:
+        if lparam == 0x0204:
+            _show_menu(hwnd)
+    elif msg == WM_COMMAND:
+        cmd = wparam & 0xFFFF
+        if cmd == ID_ON:
+            _enabled = True
+            log.info("ON")
+        elif cmd == ID_OFF:
+            _enabled = False
+            log.info("OFF")
+        elif cmd == ID_QUIT:
+            _on_exit()
+    return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+
+
 def _process_clipboard():
-    global _processing, _recent_saved
-    if _processing:
+    global _processing
+    if _processing or not _enabled:
         return
     _processing = True
     try:
         time.sleep(0.1)
         if not has_clipboard_image():
             return
-        if _mode == MODE_IMAGE:
-            filepath = snapaste_save()
-            if filepath:
-                log.info("Auto save: %s", filepath)
-                _recent_saved = filepath
-        elif _mode == MODE_PATH:
-            filepath = snapaste_path()
-            if filepath:
-                log.info("Auto path: %s", filepath)
-                _recent_saved = filepath
+        filepath = snapaste()
+        if filepath:
+            log.info("Path: %s", filepath)
     except Exception as e:
         log.error("Error: %s", e)
     finally:
         _processing = False
 
 
-def _on_to_path_mode(systray):
-    global _mode
-    _mode = MODE_PATH
-    _update_tray(systray)
-
-
-def _on_to_image_mode(systray):
-    global _mode
-    _mode = MODE_IMAGE
-    _update_tray(systray)
-
-
-def _on_path_now(systray):
-    filepath = snapaste_path()
-    if filepath:
-        log.info("Manual path: %s", filepath)
-
-
-def _on_exit(systray):
-    global _hwnd, _next_hwnd
-    if _hwnd:
-        try:
-            if _next_hwnd:
-                ctypes.windll.user32.ChangeClipboardChain(_hwnd, _next_hwnd)
-        except Exception:
-            pass
-        ctypes.windll.user32.DestroyWindow(_hwnd)
-        _hwnd = None
-    systray.shutdown()
-
-
-def _update_tray(systray):
-    if _mode == MODE_PATH:
-        systray.update(hover_text=f"{APP_NAME} - 路径模式")
-    else:
-        systray.update(hover_text=f"{APP_NAME} - 图片模式")
-
-
-def _build_menu():
-    if _mode == MODE_PATH:
-        menu_options = (
-            ("当前: 路径模式 (WSL)", None, lambda s: None),
-            ("切换为图片模式", None, _on_to_image_mode),
-            ("---", None, lambda s: None),
-            ("立即转换为路径", None, _on_path_now),
-            ("退出", None, _on_exit),
-        )
-    else:
-        menu_options = (
-            ("当前: 图片模式 (原样)", None, lambda s: None),
-            ("切换为路径模式", None, _on_to_path_mode),
-            ("---", None, lambda s: None),
-            ("退出", None, _on_exit),
-        )
-    return menu_options
-
-
-def _wnd_proc(hwnd, msg, wparam, lparam):
+def _clip_proc(hwnd, msg, wparam, lparam):
     global _next_hwnd
     if msg == WM_DRAWCLIPBOARD:
         threading.Thread(target=_process_clipboard, daemon=True).start()
@@ -141,39 +189,36 @@ def _wnd_proc(hwnd, msg, wparam, lparam):
             _next_hwnd = lparam
         elif _next_hwnd:
             win32gui.SendMessage(_next_hwnd, msg, wparam, lparam)
-    elif msg == WM_USER_EXIT:
-        if _next_hwnd:
-            ctypes.windll.user32.ChangeClipboardChain(hwnd, _next_hwnd)
-        win32gui.PostQuitMessage(0)
-        return 0
     return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
 
 def run():
-    global _hwnd, _next_hwnd, _tray
+    global _clip_hwnd, _tray_hwnd, _next_hwnd
 
-    icon_path = _create_icon_image()
-
-    menu_options = _build_menu()
-    _tray = SysTrayIcon(icon_path, APP_NAME, menu_options, on_quit=_on_exit)
-    _tray.start()
+    _create_icon_image()
 
     wc = win32gui.WNDCLASS()
-    wc.lpszClassName = "SnapasteListener"
-    wc.lpfnWndProc = _wnd_proc
+    wc.lpszClassName = "SnapasteTray"
+    wc.lpfnWndProc = _tray_proc
     wc.hInstance = win32gui.GetModuleHandle(None)
-    class_atom = win32gui.RegisterClass(wc)
-
-    _hwnd = win32gui.CreateWindowEx(
-        0, class_atom, "SnapasteListener", 0, 0, 0, 0, 0, 0, None, wc.hInstance, None
+    _tray_hwnd = win32gui.CreateWindowEx(
+        0, win32gui.RegisterClass(wc), "SnapasteTray",
+        0, 0, 0, 0, 0, 0, None, wc.hInstance, None
     )
+    _add_tray_icon(_tray_hwnd)
 
-    _next_hwnd = ctypes.windll.user32.SetClipboardViewer(_hwnd)
+    wc2 = win32gui.WNDCLASS()
+    wc2.lpszClassName = "SnapasteListener"
+    wc2.lpfnWndProc = _clip_proc
+    wc2.hInstance = win32gui.GetModuleHandle(None)
+    _clip_hwnd = win32gui.CreateWindowEx(
+        0, win32gui.RegisterClass(wc2), "SnapasteListener",
+        0, 0, 0, 0, 0, 0, None, wc2.hInstance, None
+    )
+    _next_hwnd = ctypes.windll.user32.SetClipboardViewer(_clip_hwnd)
 
-    log.info("Started. mode=%s hwnd=%s next=%s", _mode, _hwnd, _next_hwnd)
-
+    log.info("Started")
     win32gui.PumpMessages()
-
     log.info("Exited")
 
 

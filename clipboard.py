@@ -58,13 +58,42 @@ def save_clipboard_image(subdir: str = "snapaste") -> str | None:
     return str(filepath)
 
 
-def set_clipboard_path(win_path: str) -> None:
+def is_snapaste_clipboard() -> bool:
+    win32clipboard.OpenClipboard(0)
+    try:
+        if not win32clipboard.IsClipboardFormatAvailable(CF_UNICODETEXT):
+            return False
+        try:
+            text = win32clipboard.GetClipboardData(CF_UNICODETEXT)
+        except Exception:
+            return False
+        return isinstance(text, str) and text.startswith("/mnt/") and text.endswith(".png")
+    finally:
+        win32clipboard.CloseClipboard()
+
+
+def get_clipboard_dib() -> bytes | None:
+    win32clipboard.OpenClipboard(0)
+    try:
+        if not win32clipboard.IsClipboardFormatAvailable(CF_DIB):
+            return None
+        return win32clipboard.GetClipboardData(CF_DIB)
+    finally:
+        win32clipboard.CloseClipboard()
+
+
+def set_clipboard_to_path(win_path: str) -> None:
     wsl_path = win_to_wsl_path(win_path)
     win_path_native = str(Path(win_path).resolve())
+
+    dib_data = get_clipboard_dib()
 
     win32clipboard.OpenClipboard(0)
     try:
         win32clipboard.EmptyClipboard()
+
+        if dib_data:
+            win32clipboard.SetClipboardData(CF_DIB, dib_data)
 
         win32clipboard.SetClipboardData(CF_UNICODETEXT, wsl_path)
 
@@ -102,41 +131,9 @@ def _set_clipboard_filedrop(files: list[str]) -> None:
     user32.SetClipboardData(CF_HDROP, hmem)
 
 
-def is_snapaste_clipboard() -> bool:
-    win32clipboard.OpenClipboard(0)
-    try:
-        if not win32clipboard.IsClipboardFormatAvailable(CF_UNICODETEXT):
-            return False
-        try:
-            text = win32clipboard.GetClipboardData(CF_UNICODETEXT)
-        except Exception:
-            return False
-        return isinstance(text, str) and text.startswith("/mnt/") and text.endswith(".png")
-    finally:
-        win32clipboard.CloseClipboard()
-
-
 _saved_paths: list[str] = []
 
-
-def get_last_saved_path() -> str | None:
-    if _saved_paths:
-        return _saved_paths[-1]
-    return None
-
-
-def snapaste_save() -> str | None:
-    if not has_clipboard_image():
-        return None
-    if is_snapaste_clipboard():
-        return None
-    filepath = save_clipboard_image()
-    if filepath:
-        _saved_paths.append(filepath)
-    return filepath
-
-
-def snapaste_path() -> str | None:
+def snapaste() -> str | None:
     if not has_clipboard_image():
         return None
     if is_snapaste_clipboard():
@@ -145,5 +142,5 @@ def snapaste_path() -> str | None:
     if not filepath:
         return None
     _saved_paths.append(filepath)
-    set_clipboard_path(filepath)
+    set_clipboard_to_path(filepath)
     return filepath

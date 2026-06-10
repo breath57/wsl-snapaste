@@ -1,13 +1,14 @@
-[project]
+﻿[project]
 name = "wsl-snapaste"
 version = "0.1.0"
-description = "Add your description here"
+description = "Windows screenshot to WSL path bridge for AI terminal tools"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "infi-systray>=0.1.12.1",
-    "keyboard>=0.13.5",
     "pillow>=12.2.0",
-    "pystray>=0.19.5",
     "pywin32>=312",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

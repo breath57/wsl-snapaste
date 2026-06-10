@@ -43,6 +43,9 @@ def _dib_to_image(dib_data: bytes) -> Image.Image:
     return Image.open(io.BytesIO(bmp_data))
 
 
+MAX_SAVED = 50
+
+
 def save_clipboard_image(subdir: str = "snapaste") -> str | None:
     img = get_clipboard_image()
     if img is None:
@@ -55,7 +58,18 @@ def save_clipboard_image(subdir: str = "snapaste") -> str | None:
     filepath = save_dir / filename
     img.save(str(filepath), "PNG")
 
+    _cleanup_old_files(save_dir)
+
     return str(filepath)
+
+
+def _cleanup_old_files(save_dir: Path) -> None:
+    files = sorted(save_dir.glob("snap_*.png"), key=lambda f: f.stat().st_mtime)
+    while len(files) > MAX_SAVED:
+        try:
+            files.pop(0).unlink()
+        except OSError:
+            break
 
 
 def is_snapaste_clipboard() -> bool:

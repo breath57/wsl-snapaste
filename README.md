@@ -10,7 +10,7 @@
 
 ## 痛点
 
-Windows截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI、OpenCode、Claude Code、Cursor 等）。
+Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI、OpenCode、Claude Code、Cursor 等）。
 
 ## 支持的截图软件
 
@@ -27,7 +27,6 @@ Windows截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI、Ope
 - **ScreenToGif**（截图转 GIF）
 - **HyperSnap**（屏幕捕捉工具）
 - **Nimbus Screenshot**
-- **Loom**（屏幕录制）
 - **OBS Studio**（录屏软件截图）
 - **Shotcut**等
 - 没有提到的也支持

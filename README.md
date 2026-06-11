@@ -12,6 +12,14 @@
 
 Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI、OpenCode、Claude Code、Cursor 等）。
 
+## 效果演示
+
+https://github.com/user-attachments/assets/a6092806-040c-4ae8-ad08-acdcf7c651bf
+
+## 快速开始
+
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.4.exe`，直接运行即可。
+
 ## 支持的截图软件
 
 几乎所有截图软件都支持：
@@ -30,26 +38,6 @@ Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI
 - **OBS Studio**（录屏软件截图）
 - **Shotcut**等
 - 没有提到的也支持
-
-## 快速开始
-
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.4.exe`，直接运行即可。
-
-## 效果演示
-
-https://github.com/user-attachments/assets/a6092806-040c-4ae8-ad08-acdcf7c651bf
-
-## 工作流程
-
-1. 截图（支持的截图软件见下方）
-2. 切换到 WSL 终端
-3. Ctrl+V → 得到 `/tmp/snapaste/snap_xxxxx.png`
-4. AI 工具立即读取图片
-
-截图后剪贴板同时保留图片和路径文本，Windows 中粘贴仍是图片，不影响日常工作。
-
-
-本质上，任何支持标准剪贴板 API 的 Windows 截图工具均可使用。
 
 
 ## 系统托盘

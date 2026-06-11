@@ -37,7 +37,7 @@ Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI
 
 ## 效果演示
 
-https://github.com/user-attachments/assets/wsl-snpaste-effect.mp4
+https://github.com/user-attachments/assets/a6092806-040c-4ae8-ad08-acdcf7c651bf
 
 ## 工作流程
 

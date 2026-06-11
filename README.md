@@ -35,6 +35,10 @@ Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI
 
 从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.4.exe`，直接运行即可。
 
+## 效果演示
+
+https://github.com/user-attachments/assets/wsl-snpaste-effect.mp4
+
 ## 工作流程
 
 1. 截图（支持的截图软件见下方）
@@ -54,6 +58,10 @@ Windows系统截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI
 
 - **状态** > 开启 / 关闭
 - **退出**
+
+<p align="center">
+  <img src="assets/状态栏控制状态.png" alt="WSL Snapaste 状态栏控制状态" width="720">
+</p>
 
 ## License
 

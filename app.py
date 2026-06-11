@@ -28,16 +28,7 @@ LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
 
 def _close_existing_instance():
     """Find and close existing instance by locating its tray window."""
-    result = [None]
-
-    def enum_callback(hwnd, _):
-        if win32gui.GetClassName(hwnd) == "SnapasteTray":
-            result[0] = hwnd
-            return False
-        return True
-
-    win32gui.EnumWindows(enum_callback, None)
-    hwnd = result[0]
+    hwnd = win32gui.FindWindow("SnapasteTray", None)
     if not hwnd:
         return True  # No existing instance found
 

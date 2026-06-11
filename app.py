@@ -73,14 +73,21 @@ class NOTIFYICONDATAW(ctypes.Structure):
 
 
 def _create_icon_image():
-    size = 64
-    img = PilImage.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle([4, 4, 60, 60], radius=10, fill="#2d2d2d", outline="#4ec9b0", width=2)
-    draw.text((14, 8), "WSL", fill="#4ec9b0")
-    draw.text((14, 30), "Snp", fill="#dcdcaa")
     icon_path = os.path.join(tempfile.gettempdir(), "snapaste_icon.ico")
-    img.save(icon_path, format="ICO", sizes=[(16, 16), (32, 32), (64, 64)])
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(app_dir, "assets", "icon.png")
+    
+    try:
+        img = PilImage.open(logo_path)
+        img.save(icon_path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+    except FileNotFoundError:
+        size = 64
+        img = PilImage.new("RGBA", (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        draw.rounded_rectangle([4, 4, 60, 60], radius=10, fill="#2d2d2d", outline="#4ec9b0", width=2)
+        draw.text((14, 8), "WSL", fill="#4ec9b0")
+        draw.text((14, 30), "Snp", fill="#dcdcaa")
+        img.save(icon_path, format="ICO", sizes=[(16, 16), (32, 32), (64, 64)])
     return icon_path
 
 

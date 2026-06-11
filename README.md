@@ -1,6 +1,12 @@
 # WSL Snapaste
 
-Windows 截图 → 一键粘贴到 WSL 终端。
+<p align="center">
+  <img src="assets/wsl-snapaste-logo-concept1.svg" alt="WSL Snapaste Logo" width="200">
+</p>
+
+<p align="center">
+  Windows 截图 → 一键粘贴到 WSL 终端
+</p>
 
 ## 痛点
 
@@ -12,21 +18,7 @@ WSL Snapaste 让这个过程变成一步：截图 → Ctrl+V。
 
 ## 快速开始
 
-### 下载预编译
-
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-x.x.x.exe`，直接运行。
-
-### 从源码运行
-
-```bash
-# 安装 uv
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-git clone https://github.com/breath57/wsl-snapaste.git
-cd wsl-snapaste
-uv sync
-uv run python main.py
-```
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.1.exe`，直接运行即可。
 
 ## 工作流程
 
@@ -47,8 +39,6 @@ uv run python main.py
 ## 要求
 
 - Windows + WSL
-- Python >= 3.13（从源码运行时）
-- Windows 截图工具（任意）
 
 ## 技术原理
 

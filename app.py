@@ -8,6 +8,7 @@ import threading
 import time
 
 import win32gui
+import win32con
 from PIL import Image as PilImage, ImageDraw
 
 from clipboard import has_clipboard_image, restore_clipboard_image, snapaste
@@ -25,8 +26,45 @@ def _get_resource_path(relative_path):
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
 
-MUTEX_NAME = "WSL-Snapaste-SingleInstance"
-_mutex_handle = None
+def _close_existing_instance():
+    """Find and close existing instance by locating its tray window."""
+    result = [None]
+
+    def enum_callback(hwnd, _):
+        if win32gui.GetClassName(hwnd) == "SnapasteTray":
+            result[0] = hwnd
+            return False
+        return True
+
+    win32gui.EnumWindows(enum_callback, None)
+    hwnd = result[0]
+    if not hwnd:
+        return True  # No existing instance found
+
+    # Get process ID of the old instance
+    pid = ctypes.wintypes.DWORD()
+    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    if not pid.value:
+        return True
+
+    # Try graceful close first
+    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+    # Wait up to 3 seconds for it to exit
+    for _ in range(30):
+        time.sleep(0.1)
+        # Check if process still exists
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return True  # Process exited
+        ctypes.windll.kernel32.CloseHandle(handle)
+
+    # Still running — force kill
+    handle = ctypes.windll.kernel32.OpenProcess(0x0001, False, pid.value)  # PROCESS_TERMINATE
+    if handle:
+        ctypes.windll.kernel32.TerminateProcess(handle, 0)
+        ctypes.windll.kernel32.CloseHandle(handle)
+        time.sleep(0.5)
+    return True
 
 WM_CLIPBOARDUPDATE = 0x031D
 WM_COMMAND = 0x0111
@@ -188,37 +226,7 @@ def _on_exit():
             pass
         win32gui.DestroyWindow(_clip_hwnd)
         _clip_hwnd = None
-    _release_single_instance()
     win32gui.PostQuitMessage(0)
-
-
-def _acquire_single_instance():
-    global _mutex_handle
-    # Create mutex with initial ownership
-    _mutex_handle = ctypes.windll.kernel32.CreateMutexW(None, True, MUTEX_NAME)
-    if not _mutex_handle:
-        # Failed to create mutex, proceed anyway
-        return True
-    
-    # Check if mutex already exists (ERROR_ALREADY_EXISTS = 183)
-    if ctypes.windll.kernel32.GetLastError() == 183:
-        # Another instance is already running
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            "WSL Snapaste 已经在运行中。",
-            APP_NAME,
-            0x40 | 0x00000000  # MB_ICONINFORMATION | MB_OK
-        )
-        return False
-    return True
-
-
-def _release_single_instance():
-    global _mutex_handle
-    if _mutex_handle:
-        ctypes.windll.kernel32.ReleaseMutex(_mutex_handle)
-        ctypes.windll.kernel32.CloseHandle(_mutex_handle)
-        _mutex_handle = None
 
 
 def _tray_proc(hwnd, msg, wparam, lparam):
@@ -365,10 +373,8 @@ def _watchdog():
 def run():
     global _clip_hwnd, _tray_hwnd, _watchdog_running, _last_clipboard_time
 
-    # Check for single instance before initializing
-    if not _acquire_single_instance():
-        log.info("Another instance is already running, exiting.")
-        return
+    # Close existing instance before initializing
+    _close_existing_instance()
 
     _set_dpi_awareness()
     _create_icon_image()

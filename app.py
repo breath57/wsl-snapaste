@@ -25,6 +25,9 @@ def _get_resource_path(relative_path):
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
 
+MUTEX_NAME = "WSL-Snapaste-SingleInstance"
+_mutex_handle = None
+
 WM_CLIPBOARDUPDATE = 0x031D
 WM_COMMAND = 0x0111
 WM_TRAYICON = 0x0401
@@ -173,7 +176,37 @@ def _on_exit():
             pass
         win32gui.DestroyWindow(_clip_hwnd)
         _clip_hwnd = None
+    _release_single_instance()
     win32gui.PostQuitMessage(0)
+
+
+def _acquire_single_instance():
+    global _mutex_handle
+    # Create mutex with initial ownership
+    _mutex_handle = ctypes.windll.kernel32.CreateMutexW(None, True, MUTEX_NAME)
+    if not _mutex_handle:
+        # Failed to create mutex, proceed anyway
+        return True
+    
+    # Check if mutex already exists (ERROR_ALREADY_EXISTS = 183)
+    if ctypes.windll.kernel32.GetLastError() == 183:
+        # Another instance is already running
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            "WSL Snapaste 已经在运行中。",
+            APP_NAME,
+            0x40 | 0x00000000  # MB_ICONINFORMATION | MB_OK
+        )
+        return False
+    return True
+
+
+def _release_single_instance():
+    global _mutex_handle
+    if _mutex_handle:
+        ctypes.windll.kernel32.ReleaseMutex(_mutex_handle)
+        ctypes.windll.kernel32.CloseHandle(_mutex_handle)
+        _mutex_handle = None
 
 
 def _tray_proc(hwnd, msg, wparam, lparam):
@@ -247,6 +280,11 @@ def _clip_proc(hwnd, msg, wparam, lparam):
 
 def run():
     global _clip_hwnd, _tray_hwnd
+
+    # Check for single instance before initializing
+    if not _acquire_single_instance():
+        log.info("Another instance is already running, exiting.")
+        return
 
     _set_dpi_awareness()
     _create_icon_image()

@@ -1,3 +1,4 @@
+import sys
 import ctypes
 import ctypes.wintypes
 import logging
@@ -11,6 +12,15 @@ from PIL import Image as PilImage, ImageDraw
 
 from clipboard import has_clipboard_image, restore_clipboard_image, snapaste
 from version import __version__
+
+def _get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
 
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
@@ -74,8 +84,7 @@ class NOTIFYICONDATAW(ctypes.Structure):
 
 def _create_icon_image():
     icon_path = os.path.join(tempfile.gettempdir(), "snapaste_icon.ico")
-    app_dir = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(app_dir, "assets", "icon.png")
+    logo_path = _get_resource_path("assets/icon.png")
     
     try:
         img = PilImage.open(logo_path)

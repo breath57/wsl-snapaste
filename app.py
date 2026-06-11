@@ -36,6 +36,12 @@ ID_OFF = 2
 ID_QUIT = 3
 ID_TRAYICON = 1
 
+# Watchdog settings
+WATCHDOG_INTERVAL = 5  # seconds
+_last_clipboard_time = 0
+_watchdog_thread = None
+_watchdog_running = False
+
 NIM_ADD = 0x00000000
 NIM_DELETE = 0x00000002
 NIF_MESSAGE = 0x00000001
@@ -165,7 +171,11 @@ def _show_menu(hwnd):
 
 
 def _on_exit():
-    global _clip_hwnd
+    global _clip_hwnd, _watchdog_running
+    
+    # Stop watchdog thread
+    _watchdog_running = False
+    
     if _tray_hwnd:
         _remove_tray_icon(_tray_hwnd)
         win32gui.DestroyWindow(_tray_hwnd)
@@ -235,19 +245,39 @@ def _tray_proc(hwnd, msg, wparam, lparam):
 
 def _toggle_clipboard(to_enabled: bool):
     """Trigger clipboard conversion on state toggle."""
-    global _processing
+    global _processing, _last_clipboard_time
+    
     if _processing:
+        log.info("Toggle ignored, already processing")
         return
+    
     _processing = True
     try:
         time.sleep(0.1)
         if to_enabled:
+            # Re-register clipboard listener when enabling
+            if _clip_hwnd:
+                try:
+                    ctypes.windll.user32.RemoveClipboardFormatListener(_clip_hwnd)
+                    time.sleep(0.05)
+                    if ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+                        log.info("Clipboard listener re-registered on enable")
+                        _last_clipboard_time = time.time()
+                    else:
+                        log.error("Failed to re-register clipboard listener on enable")
+                except Exception as e:
+                    log.error("Error re-registering listener: %s", e)
+            
             filepath = snapaste()
             if filepath:
                 log.info("Toggle ON -> Path: %s", filepath)
+            else:
+                log.info("Toggle ON -> No clipboard image")
         else:
             if restore_clipboard_image():
                 log.info("Toggle OFF -> Restored image")
+            else:
+                log.info("Toggle OFF -> No image to restore")
     except Exception as e:
         log.error("Toggle error: %s", e)
     finally:
@@ -255,31 +285,68 @@ def _toggle_clipboard(to_enabled: bool):
 
 
 def _process_clipboard():
-    global _processing
+    global _processing, _last_clipboard_time
+    
     if _processing or not _enabled:
         return
+    
     _processing = True
     try:
         time.sleep(0.1)
         if not has_clipboard_image():
             return
+        
+        # Update last clipboard time
+        _last_clipboard_time = time.time()
+        
         filepath = snapaste()
         if filepath:
-            log.info("Path: %s", filepath)
+            log.info("Clipboard converted: %s", filepath)
+        else:
+            log.info("Clipboard image detected but conversion failed")
     except Exception as e:
-        log.error("Error: %s", e)
+        log.error("Clipboard processing error: %s", e)
     finally:
         _processing = False
 
 
 def _clip_proc(hwnd, msg, wparam, lparam):
+    global _last_clipboard_time
     if msg == WM_CLIPBOARDUPDATE:
+        _last_clipboard_time = time.time()
         threading.Thread(target=_process_clipboard, daemon=True).start()
     return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
 
+def _watchdog():
+    """Watchdog thread to monitor clipboard listener health."""
+    global _clip_hwnd, _watchdog_running, _last_clipboard_time
+    
+    while _watchdog_running:
+        time.sleep(WATCHDOG_INTERVAL)
+        
+        if not _enabled:
+            continue
+            
+        # Check if we haven't received clipboard updates for a while
+        if _last_clipboard_time > 0 and time.time() - _last_clipboard_time > 30:
+            log.warning("Clipboard listener may be stale, attempting to re-register")
+            try:
+                # Try to re-register the clipboard listener
+                if _clip_hwnd:
+                    ctypes.windll.user32.RemoveClipboardFormatListener(_clip_hwnd)
+                    time.sleep(0.1)
+                    if ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+                        log.info("Clipboard listener re-registered successfully")
+                        _last_clipboard_time = time.time()
+                    else:
+                        log.error("Failed to re-register clipboard listener")
+            except Exception as e:
+                log.error("Watchdog re-register error: %s", e)
+
+
 def run():
-    global _clip_hwnd, _tray_hwnd
+    global _clip_hwnd, _tray_hwnd, _watchdog_running, _last_clipboard_time
 
     # Check for single instance before initializing
     if not _acquire_single_instance():
@@ -307,8 +374,16 @@ def run():
         0, win32gui.RegisterClass(wc2), "SnapasteListener",
         0, 0, 0, 0, 0, 0, None, wc2.hInstance, None
     )
-    if not ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+    if ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+        log.info("Clipboard listener registered successfully")
+        _last_clipboard_time = time.time()
+    else:
         log.error("AddClipboardFormatListener failed")
+
+    # Start watchdog thread
+    _watchdog_running = True
+    _watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
+    _watchdog_thread.start()
 
     log.info("Started")
     win32gui.PumpMessages()

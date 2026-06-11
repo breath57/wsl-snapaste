@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">WSL Snapaste Logo Concept 2</title>
+  <desc id="logo-desc">A Windows pane and WSL terminal pane connected by a paste bridge arrow.</desc>
+  <defs>
+    <linearGradient id="panel" x1="30" y1="30" x2="170" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0ea5e9" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="terminal" x1="58" y1="72" x2="142" y2="154" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111827" />
+      <stop offset="1" stop-color="#020617" />
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="168" height="168" rx="44" fill="#f8fafc" />
+  <rect x="28" y="28" width="144" height="144" rx="34" fill="url(#panel)" />
+  <path d="M62 60 H99 V97 H62 Z M105 60 H142 V97 H105 Z M62 103 H99 V140 H62 Z M105 103 H142 V140 H105 Z" fill="#ffffff" opacity="0.9" />
+  <rect x="50" y="74" width="100" height="76" rx="16" fill="url(#terminal)" stroke="#93c5fd" stroke-width="3" />
+  <path d="M70 104 L85 114 L70 124" fill="none" stroke="#4ade80" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M96 126 H128" fill="none" stroke="#fde68a" stroke-width="7" stroke-linecap="round" />
+  <path d="M58 57 H86 C92 57 96 61 96 67 V74" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <path d="M86 47 L102 64 L86 81" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="116" y="42" width="34" height="42" rx="8" fill="#fef3c7" stroke="#1d4ed8" stroke-width="4" />
+  <rect x="126" y="34" width="14" height="14" rx="4" fill="#1d4ed8" />
+</svg>

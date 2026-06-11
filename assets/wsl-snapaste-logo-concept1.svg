@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">WSL Snapaste Logo Concept 1</title>
+  <desc id="logo-desc">A dark terminal window with a clipboard image flowing into a WSL path prompt.</desc>
+  <defs>
+    <linearGradient id="bg" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#101827" />
+      <stop offset="1" stop-color="#1f2937" />
+    </linearGradient>
+    <linearGradient id="accent" x1="45" y1="55" x2="155" y2="145" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4ec9b0" />
+      <stop offset="1" stop-color="#60a5fa" />
+    </linearGradient>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#020617" flood-opacity="0.28" />
+    </filter>
+  </defs>
+  <rect x="18" y="18" width="164" height="164" rx="38" fill="url(#bg)" filter="url(#soft-shadow)" />
+  <rect x="42" y="48" width="116" height="88" rx="12" fill="#0b1220" stroke="#334155" stroke-width="4" />
+  <circle cx="57" cy="64" r="4" fill="#f87171" />
+  <circle cx="72" cy="64" r="4" fill="#fbbf24" />
+  <circle cx="87" cy="64" r="4" fill="#34d399" />
+  <path d="M60 91 L76 102 L60 113" fill="none" stroke="#4ec9b0" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M88 115 H134" fill="none" stroke="#dcdcaa" stroke-width="8" stroke-linecap="round" />
+  <rect x="64" y="142" width="72" height="26" rx="13" fill="url(#accent)" />
+  <path d="M84 155 H116" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" />
+  <path d="M110 145 L122 155 L110 165" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="124" y="72" width="36" height="36" rx="8" fill="#ffffff" opacity="0.96" />
+  <path d="M132 96 L139 88 L146 94 L151 83 L156 101 H132 Z" fill="#60a5fa" />
+  <circle cx="136" cy="82" r="4" fill="#4ec9b0" />
+</svg>

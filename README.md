@@ -1,89 +1,63 @@
 # WSL Snapaste
 
-把 Windows 截图直接粘贴到 WSL 终端——一步到位。
+Windows 截图 → 一键粘贴到 WSL 终端。
 
 ## 痛点
 
-在 Windows 上用 Snipaste、ShareX、Win+Shift+S 等截图后，图片在 Windows 剪贴板里。但 WSL 终端无法直接读取 Windows 剪贴板中的图片数据——Ctrl+V 粘贴进去的是乱码或者什么都没有。
+Windows 剪贴板里的图片无法直接 Ctrl+V 到 WSL 终端。想发给 WSL 里的 AI 编程工具（Codex CLI、OpenCode、Claude Code、Cursor 等），需要：
 
-这意味着每次想把截图发给 WSL 里的 AI 编程工具（Codex CLI、OpenCode、Claude Code、Cursor Terminal 等），都需要：截图 → 手动保存文件 → 用 `wslpath` 转换路径 → 复制路径 → 粘贴到终端。
+截图 → 手动保存 → `wslpath` 转换 → 复制路径 → 粘贴
 
-WSL Snapaste 解决这个问题：监听剪贴板，截图后自动将图片保存为文件，并把 WSL 路径写回剪贴板。你在 WSL 终端里直接 Ctrl+V，得到的就是图片路径。
+WSL Snapaste 让这个过程变成一步：截图 → Ctrl+V。
 
-## 下载
+## 快速开始
 
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases) 页面下载最新版 `WSL-Snapaste-v版本号.exe`，双击运行即可。无需安装 Python。
+### 下载预编译
 
-Release 中也会附带 `WSL-Snapaste.exe` 稳定文件名，适合脚本或快捷方式固定引用。
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-x.x.x.exe`，直接运行。
 
-## 从源码运行
+### 从源码运行
 
-```
+```bash
 # 安装 uv
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 git clone https://github.com/breath57/wsl-snapaste.git
 cd wsl-snapaste
-
 uv sync
-```
-
-## 使用
-
-### 启动
-
-```
 uv run python main.py
 ```
 
-程序在系统托盘静默运行，无窗口。也可以用 `start.vbs` 实现开机静默启动。
+## 工作流程
 
-### 构建 exe
-
-```
-build.bat
-```
-
-构建产物在 `dist/WSL-Snapaste-v版本号.exe`，例如 `dist/WSL-Snapaste-v1.0.0.exe`。同时会生成稳定别名 `dist/WSL-Snapaste.exe`。
-
-### 工作流程
-
-1. 用任意截图工具截图（Snipaste、ShareX、Win+Shift+S、QQ 截图……）
+1. 截图（Snipaste、ShareX、Win+Shift+S、QQ 截图……任何可写入剪贴板的工具）
 2. 切换到 WSL 终端
-3. Ctrl+V → 得到 `/mnt/c/.../snapaste/snap_xxxxx.png` 路径
-4. AI 工具直接读取图片，开始工作
+3. Ctrl+V → 得到 `/tmp/snapaste/snap_xxxxx.png`
+4. AI 工具立即读取图片
 
-截图后剪贴板同时保留图片数据和路径文本，Windows 中粘贴仍然是图片，不影响日常使用。
+截图后剪贴板同时保留图片和路径文本，Windows 中粘贴仍是图片，不影响日常工作。
 
-### 托盘控制
+## 系统托盘
 
 右键托盘图标：
 
-- **状态** > 开启 / 关闭 — 关闭后不处理剪贴板，恢复原始行为
-- **退出** — 关闭程序
+- **状态** > 开启 / 关闭
+- **退出**
 
 ## 要求
 
 - Windows + WSL
-- Python >= 3.13
-- 任意 Windows 截图工具（Snipaste、ShareX、Win+Shift+S、QQ 截图等）
-
-## 版本号
-
-版本号在 `version.py` 和 `pyproject.toml` 中维护。发布新版本时同步修改版本号，然后重新构建或推送 `v版本号` 标签触发 Release workflow。
-
-## 关于体积
-
-exe 约 16MB 是正常的。它是单文件程序，内部包含 Python 运行时、Pillow、pywin32 和应用代码。用户电脑不需要提前安装 Python。
+- Python >= 3.13（从源码运行时）
+- Windows 截图工具（任意）
 
 ## 技术原理
 
-程序通过 `SetClipboardViewer` 监听 Windows 剪贴板变化。检测到图片后：
+通过 `SetClipboardViewer` 监听剪贴板变化，检测到图片后：
 
-1. 将 DIB 数据保存为 PNG（自动清理，最多保留 50 张）
-2. 在剪贴板中同时写入图片数据、WSL 路径文本和文件拖放格式
+1. 保存为 PNG（自动清理，最多 50 张）
+2. 在剪贴板中同时写入图片数据、WSL 路径文本、文件拖放格式
 
-Windows 应用粘贴得到的仍然是图片，WSL 终端粘贴得到的是路径。
+Windows 应用粘贴得到图片，WSL 终端粘贴得到路径。
 
 ## License
 

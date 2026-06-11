@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">WSL Snapaste Logo Concept 3</title>
+  <desc id="logo-desc">A screenshot crop frame transforming into a clean WSL file path.</desc>
+  <defs>
+    <linearGradient id="mark" x1="34" y1="34" x2="166" y2="166" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22d3ee" />
+      <stop offset="0.55" stop-color="#4ec9b0" />
+      <stop offset="1" stop-color="#a3e635" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#1e293b" />
+      <stop offset="1" stop-color="#020617" />
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="84" fill="url(#glow)" />
+  <path d="M58 66 H42 V98 M142 66 H158 V98 M58 134 H42 V102 M142 134 H158 V102" fill="none" stroke="url(#mark)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+  <rect x="62" y="70" width="76" height="52" rx="12" fill="#f8fafc" opacity="0.96" />
+  <path d="M74 106 L88 91 L101 103 L111 88 L128 112 H74 Z" fill="#38bdf8" />
+  <circle cx="84" cy="84" r="5" fill="#4ec9b0" />
+  <path d="M58 145 H82 L94 157 H142" fill="none" stroke="#dcdcaa" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M108 139 L124 156 L108 173" fill="none" stroke="url(#mark)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M67 47 L79 35 H121 L133 47" fill="none" stroke="#64748b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

@@ -38,7 +38,9 @@ ID_TRAYICON = 1
 
 # Watchdog settings
 WATCHDOG_INTERVAL = 5  # seconds
+WATCHDOG_REREGISTER_INTERVAL = 120  # re-register every 2 minutes
 _last_clipboard_time = 0
+_last_re_register_time = 0
 _watchdog_thread = None
 _watchdog_running = False
 
@@ -320,29 +322,44 @@ def _clip_proc(hwnd, msg, wparam, lparam):
 
 def _watchdog():
     """Watchdog thread to monitor clipboard listener health."""
-    global _clip_hwnd, _watchdog_running, _last_clipboard_time
+    global _clip_hwnd, _watchdog_running, _last_clipboard_time, _last_re_register_time
+    
+    _last_re_register_time = time.time()
     
     while _watchdog_running:
         time.sleep(WATCHDOG_INTERVAL)
         
-        if not _enabled:
+        if not _enabled or not _clip_hwnd:
             continue
-            
-        # Check if we haven't received clipboard updates for a while
-        if _last_clipboard_time > 0 and time.time() - _last_clipboard_time > 30:
-            log.warning("Clipboard listener may be stale, attempting to re-register")
-            try:
-                # Try to re-register the clipboard listener
-                if _clip_hwnd:
-                    ctypes.windll.user32.RemoveClipboardFormatListener(_clip_hwnd)
-                    time.sleep(0.1)
-                    if ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
-                        log.info("Clipboard listener re-registered successfully")
-                        _last_clipboard_time = time.time()
-                    else:
-                        log.error("Failed to re-register clipboard listener")
-            except Exception as e:
-                log.error("Watchdog re-register error: %s", e)
+        
+        now = time.time()
+        should_reregister = False
+        reason = ""
+        
+        # Reason 1: periodic re-register (always, every 2 min)
+        if now - _last_re_register_time >= WATCHDOG_REREGISTER_INTERVAL:
+            should_reregister = True
+            reason = "periodic"
+        
+        # Reason 2: stale listener (no clipboard activity for 30s)
+        if _last_clipboard_time > 0 and now - _last_clipboard_time > 30:
+            should_reregister = True
+            reason = "stale"
+        
+        if not should_reregister:
+            continue
+        
+        try:
+            ctypes.windll.user32.RemoveClipboardFormatListener(_clip_hwnd)
+            time.sleep(0.1)
+            if ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+                log.info("Clipboard listener re-registered (%s)", reason)
+                _last_clipboard_time = now
+                _last_re_register_time = now
+            else:
+                log.error("Failed to re-register clipboard listener (%s)", reason)
+        except Exception as e:
+            log.error("Watchdog re-register error (%s): %s", reason, e)
 
 
 def run():

@@ -1,4 +1,4 @@
-﻿[project]
+[project]
 name = "wsl-snapaste"
 version = "1.0.0"
 description = "Paste Windows screenshots directly into WSL terminal"
@@ -8,6 +8,17 @@ dependencies = [
     "pillow>=12.2.0",
     "pywin32>=312",
 ]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.20.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.pyinstaller]
+paths = ["."]
 
 [build-system]
 requires = ["hatchling"]

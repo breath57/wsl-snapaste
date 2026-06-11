@@ -9,7 +9,8 @@ import time
 import win32gui
 from PIL import Image as PilImage, ImageDraw
 
-from clipboard import has_clipboard_image, snapaste, restore_clipboard_image
+from clipboard import has_clipboard_image, restore_clipboard_image, snapaste
+from version import __version__
 
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
@@ -95,7 +96,7 @@ def _add_tray_icon(hwnd):
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP
     nid.uCallbackMessage = WM_TRAYICON
     nid.hIcon = hicon
-    nid.szTip = APP_NAME
+    nid.szTip = f"{APP_NAME} v{__version__}"
     ctypes.windll.shell32.Shell_NotifyIconW(NIM_ADD, ctypes.byref(nid))
 
 

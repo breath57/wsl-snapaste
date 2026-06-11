@@ -18,16 +18,38 @@ WSL Snapaste 让这个过程变成一步：截图 → Ctrl+V。
 
 ## 快速开始
 
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.1.exe`，直接运行即可。
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.2.exe`，直接运行即可。
 
 ## 工作流程
 
-1. 截图（Snipaste、ShareX、Win+Shift+S、QQ 截图……任何可写入剪贴板的工具）
+1. 截图（支持的截图软件见下方）
 2. 切换到 WSL 终端
 3. Ctrl+V → 得到 `/tmp/snapaste/snap_xxxxx.png`
 4. AI 工具立即读取图片
 
 截图后剪贴板同时保留图片和路径文本，Windows 中粘贴仍是图片，不影响日常工作。
+
+## 支持的截图软件
+
+只要是能将图片写入 Windows 剪贴板的截图工具，都自动支持：
+
+- **Snipaste**（F1 悬停截图、F2 截屏注解）
+- **ShareX**（专业级截图录屏工具）
+- **Windows 系统截图**（Win+Shift+S）
+- **QQ 截图**（Ctrl+Alt+A）
+- **微信截图**（Alt+A）
+- **DingTalk 截图**（Ctrl+Shift+A）
+- **FastStone Capture**
+- **PicPick**（多功能截图工具）
+- **ScreenToGif**（截图转 GIF）
+- **HyperSnap**（屏幕捕捉工具）
+- **Nimbus Screenshot**
+- **Loom**（屏幕录制）
+- **OBS Studio**（录屏软件截图）
+- **Shotcut**等
+
+本质上，任何支持标准剪贴板 API 的 Windows 截图工具均可使用。
+
 
 ## 系统托盘
 

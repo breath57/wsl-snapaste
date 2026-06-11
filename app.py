@@ -25,8 +25,7 @@ def _get_resource_path(relative_path):
 APP_NAME = "WSL Snapaste"
 LOG_PATH = os.path.join(tempfile.gettempdir(), "snapaste.log")
 
-WM_DRAWCLIPBOARD = 0x0308
-WM_CHANGECBCHAIN = 0x030D
+WM_CLIPBOARDUPDATE = 0x031D
 WM_COMMAND = 0x0111
 WM_TRAYICON = 0x0401
 ID_ON = 1
@@ -57,7 +56,6 @@ log = logging.getLogger(__name__)
 
 _clip_hwnd = None
 _tray_hwnd = None
-_next_hwnd = None
 _enabled = True
 _processing = False
 
@@ -85,25 +83,44 @@ class NOTIFYICONDATAW(ctypes.Structure):
 def _create_icon_image():
     icon_path = os.path.join(tempfile.gettempdir(), "snapaste_icon.ico")
     logo_path = _get_resource_path("assets/icon.png")
-    
+
     try:
-        img = PilImage.open(logo_path)
-        img.save(icon_path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+        img = PilImage.open(logo_path).convert("RGBA")
+        img.save(
+            icon_path,
+            format="ICO",
+            sizes=[(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)],
+        )
     except FileNotFoundError:
-        size = 64
+        size = 256
         img = PilImage.new("RGBA", (size, size), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw.rounded_rectangle([4, 4, 60, 60], radius=10, fill="#2d2d2d", outline="#4ec9b0", width=2)
-        draw.text((14, 8), "WSL", fill="#4ec9b0")
-        draw.text((14, 30), "Snp", fill="#dcdcaa")
-        img.save(icon_path, format="ICO", sizes=[(16, 16), (32, 32), (64, 64)])
+        draw.rounded_rectangle([16, 16, 240, 240], radius=44, fill="#2d2d2d", outline="#4ec9b0", width=10)
+        draw.text((56, 52), "WSL", fill="#4ec9b0")
+        draw.text((56, 132), "Snp", fill="#dcdcaa")
+        img.save(icon_path, format="ICO", sizes=[(16, 16), (20, 20), (24, 24), (32, 32), (40, 40), (48, 48), (64, 64), (128, 128), (256, 256)])
     return icon_path
 
 
+def _set_dpi_awareness():
+    try:
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+    except Exception:
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            try:
+                ctypes.windll.user32.SetProcessDPIAware()
+            except Exception:
+                pass
+
+
 def _add_tray_icon(hwnd):
+    cx = ctypes.windll.user32.GetSystemMetrics(49) or 32
+    cy = ctypes.windll.user32.GetSystemMetrics(50) or 32
     hicon = win32gui.LoadImage(
         0, os.path.join(tempfile.gettempdir(), "snapaste_icon.ico"),
-        1, 16, 16, 0x00000010
+        1, cx, cy, 0x00000010
     )
     nid = NOTIFYICONDATAW()
     nid.cbSize = ctypes.sizeof(NOTIFYICONDATAW)
@@ -132,7 +149,8 @@ def _show_menu(hwnd):
     off_flag = MF_CHECKED if not _enabled else 0
     win32gui.AppendMenu(hsub, MF_STRING | on_flag, ID_ON, "\u5f00\u542f")
     win32gui.AppendMenu(hsub, MF_STRING | off_flag, ID_OFF, "\u5173\u95ed")
-    win32gui.AppendMenu(hmenu, MF_POPUP, hsub, "\u72b6\u6001")
+    status_text = "\u72b6\u6001[\u5f00\u542f]" if _enabled else "\u72b6\u6001[\u5173\u95ed]"
+    win32gui.AppendMenu(hmenu, MF_POPUP, hsub, status_text)
 
     win32gui.AppendMenu(hmenu, MF_SEPARATOR, 0, "")
     win32gui.AppendMenu(hmenu, MF_STRING, ID_QUIT, "\u9000\u51fa")
@@ -144,14 +162,13 @@ def _show_menu(hwnd):
 
 
 def _on_exit():
-    global _clip_hwnd, _next_hwnd
+    global _clip_hwnd
     if _tray_hwnd:
         _remove_tray_icon(_tray_hwnd)
         win32gui.DestroyWindow(_tray_hwnd)
     if _clip_hwnd:
         try:
-            if _next_hwnd:
-                ctypes.windll.user32.ChangeClipboardChain(_clip_hwnd, _next_hwnd)
+            ctypes.windll.user32.RemoveClipboardFormatListener(_clip_hwnd)
         except Exception:
             pass
         win32gui.DestroyWindow(_clip_hwnd)
@@ -223,22 +240,15 @@ def _process_clipboard():
 
 
 def _clip_proc(hwnd, msg, wparam, lparam):
-    global _next_hwnd
-    if msg == WM_DRAWCLIPBOARD:
+    if msg == WM_CLIPBOARDUPDATE:
         threading.Thread(target=_process_clipboard, daemon=True).start()
-        if _next_hwnd:
-            win32gui.SendMessage(_next_hwnd, msg, wparam, lparam)
-    elif msg == WM_CHANGECBCHAIN:
-        if _next_hwnd == wparam:
-            _next_hwnd = lparam
-        elif _next_hwnd:
-            win32gui.SendMessage(_next_hwnd, msg, wparam, lparam)
     return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
 
 def run():
-    global _clip_hwnd, _tray_hwnd, _next_hwnd
+    global _clip_hwnd, _tray_hwnd
 
+    _set_dpi_awareness()
     _create_icon_image()
 
     wc = win32gui.WNDCLASS()
@@ -259,7 +269,8 @@ def run():
         0, win32gui.RegisterClass(wc2), "SnapasteListener",
         0, 0, 0, 0, 0, 0, None, wc2.hInstance, None
     )
-    _next_hwnd = ctypes.windll.user32.SetClipboardViewer(_clip_hwnd)
+    if not ctypes.windll.user32.AddClipboardFormatListener(_clip_hwnd):
+        log.error("AddClipboardFormatListener failed")
 
     log.info("Started")
     win32gui.PumpMessages()

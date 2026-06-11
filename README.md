@@ -34,7 +34,7 @@ Windows截图后，无法直接 Ctrl+V 到 WSL AI 编程工具（Codex CLI、Ope
 
 ## 快速开始
 
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.3.exe`，直接运行即可。
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载 `WSL-Snapaste-v1.0.4.exe`，直接运行即可。
 
 ## 工作流程
 

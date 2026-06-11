@@ -28,7 +28,7 @@ jobs:
 
       - name: Build EXE with PyInstaller
         run: |
-          pyinstaller --onefile --windowed --name "WSL-Snapaste-${{ github.event.release.tag_name }}" --add-data "assets;assets" main.py
+          pyinstaller --onefile --windowed --icon "assets/app.ico" --name "WSL-Snapaste-${{ github.event.release.tag_name }}" --add-data "assets;assets" main.py
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2

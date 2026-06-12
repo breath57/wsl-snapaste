@@ -1,6 +1,6 @@
 [project]
 name = "wsl-snapaste"
-version = "1.0.10"
+version = "1.0.11"
 description = "Paste Windows screenshots directly into WSL terminal"
 readme = "README.md"
 requires-python = ">=3.13"

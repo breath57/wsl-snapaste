@@ -1,38 +1,43 @@
-name: Build Windows EXE
+name: Build Windows Package
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build Windows EXE
+    name: Build Windows Package
     runs-on: windows-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller pillow pywin32
+        run: uv sync --group dev
 
-      - name: Build EXE with PyInstaller
+      - name: Read version
+        shell: pwsh
         run: |
-          pyinstaller --onefile --windowed --icon "assets/app.ico" --name "WSL-Snapaste-${{ github.event.release.tag_name }}" --add-data "assets;assets" main.py
+          $version = uv run python -c "from version import __version__; print(__version__)"
+          "VERSION=$version" >> $env:GITHUB_ENV
 
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Build package
+        shell: cmd
+        env:
+          CI: "1"
+        run: build.bat
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: dist/WSL-Snapaste-*.exe
-          fail_on_unmatched_files: true
+          name: WSL-Snapaste-v${{ env.VERSION }}
+          path: dist/WSL-Snapaste-v${{ env.VERSION }}.zip

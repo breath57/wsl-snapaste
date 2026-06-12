@@ -47,10 +47,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: WSL-Snapaste-v${{ env.VERSION }}
-          path: dist/WSL-Snapaste*.exe
+          path: dist/WSL-Snapaste-v${{ env.VERSION }}.zip
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/WSL-Snapaste*.exe
+          files: dist/WSL-Snapaste-v${{ env.VERSION }}.zip

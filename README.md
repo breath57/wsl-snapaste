@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/a6092806-040c-4ae8-ad08-acdcf7c651bf
 
 ## 快速开始
 
-从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载最新版本，双击直接运行即可。
+从 [Releases](https://github.com/breath57/wsl-snapaste/releases/latest) 下载最新版本 zip，解压后双击 `WSL-Snapaste.exe` 运行即可。
 
 ## 支持的截图软件
 
